@@ -1,6 +1,10 @@
 name: Go build and test
 
-on: [push, pull_request]
+on:
+  push:
+    tags-ignore: ["v*"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   build:
