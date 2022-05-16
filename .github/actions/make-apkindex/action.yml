@@ -1,0 +1,26 @@
+name: "Alpine Build APK Index"
+description: "Build Alpine Linux repository from a set of APK files"
+author: Antoine Martin <antoine@openance.com>
+inputs:
+  apk_files:
+    description: "Set of APK files"
+    required: true
+    default: "dist/*.apk"
+  signature_key:
+    description: "APK index signature key"
+    required: true
+  signature_key_name:
+    description: "APK index signature key name"
+    required: true
+  destination:
+    description: "Destination directory (from the workspace)"
+    required: true
+    default: "dist/repo"
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+
+branding:
+  icon: "package"
+  color: "blue"

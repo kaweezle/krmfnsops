@@ -1,0 +1,150 @@
+project_name: krmfnsops
+release:
+  github:
+    owner: kaweezle
+    name: krmfnsops
+  name_template: '{{.Tag}}'
+  extra_files:
+  - glob: ./kaweezle-devel@kaweezle.com-c9d89864.rsa.pub
+scoop:
+  name: krmfnsops
+  commit_author:
+    name: goreleaserbot
+    email: goreleaser@carlosbecker.com
+  commit_msg_template: Scoop update for {{ .ProjectName }} version {{ .Tag }}
+builds:
+- id: krmfnsops
+  goos:
+  - linux
+  goarch:
+  - "386"
+  - amd64
+  goarm:
+  - "6"
+  gomips:
+  - hardfloat
+  targets:
+  - linux_386
+  - linux_amd64
+  dir: .
+  main: .
+  ldflags:
+  - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{
+    .CommitDate }} -X main.builtBy=pterm
+  flags:
+  - -trimpath
+  binary: krmfnsops
+  env:
+  - CGO_ENABLED=0
+  builder: go
+  mod_timestamp: '{{ .CommitTimestamp }}'
+  gobinary: go
+archives:
+- id: default
+  builds:
+  - krmfnsops
+  name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{
+    end }}'
+  replacements:
+    "386": i386
+    amd64: x86_64
+    linux: Linux
+  format: tar.gz
+  files:
+  - src: license*
+  - src: LICENSE*
+  - src: readme*
+  - src: README*
+  - src: changelog*
+  - src: CHANGELOG*
+nfpms:
+- file_name_template: '{{ .PackageName }}-{{ .Version }}.{{ .Arch }}{{ if .Arm }}v{{
+    .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}'
+  package_name: krmfnsops
+  replacements:
+    "386": x86
+    amd64: x86_64
+  apk:
+    signature:
+      key_file: gpg_key.asc
+      key_name: kaweezle-devel@kaweezle.com-c9d89864.rsa.pub
+  id: default
+  builds:
+  - krmfnsops
+  formats:
+  - apk
+  homepage: https://github.com/kaweezle/krmfnsops
+  maintainer: Kaweezle <kaweezle-devel@kaweezle.com>
+  description: KRM function (Kustomize) to decrypt SOPS encoded resources
+  license: Apache 2.0
+  bindir: /usr/bin
+snapshot:
+  name_template: '{{ incpatch .Version }}-devel'
+checksum:
+  name_template: '{{ .ProjectName }}_checksums.txt'
+  algorithm: sha256
+changelog:
+  filters:
+    exclude:
+    - ^docs
+    - ^test
+    - ^ci
+    - ^refactor
+    - Merge pull request
+    - Merge branch
+    - go mod tidy
+  sort: asc
+dist: dist
+env_files:
+  github_token: ~/.config/goreleaser/github_token
+  gitlab_token: ~/.config/goreleaser/gitlab_token
+  gitea_token: ~/.config/goreleaser/gitea_token
+before:
+  hooks:
+  - go mod tidy
+source:
+  name_template: '{{ .ProjectName }}-{{ .Version }}'
+  format: tar.gz
+gomod:
+  gobinary: go
+announce:
+  twitter:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL
+      }}'
+  reddit:
+    title_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    url_template: '{{ .ReleaseURL }}'
+  slack:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL
+      }}'
+    username: GoReleaser
+  discord:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL
+      }}'
+    author: GoReleaser
+    color: "3888754"
+    icon_url: https://goreleaser.com/static/avatar.png
+  teams:
+    title_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL
+      }}'
+    color: '#2D313E'
+    icon_url: https://goreleaser.com/static/avatar.png
+  smtp:
+    subject_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    body_template: 'You can view details from: {{ .ReleaseURL }}'
+  mattermost:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL
+      }}'
+    title_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    username: GoReleaser
+  linkedin:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL
+      }}'
+  telegram:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL
+      }}'
+github_urls:
+  download: https://github.com
+gitlab_urls:
+  download: https://gitlab.com

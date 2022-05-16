@@ -13,3 +13,5 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+gpg_key.asc
+kaweezle-devel@kaweezle.com-c9d89864.rsa.pub

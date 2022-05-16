@@ -1,0 +1,64 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - "386"
+      - amd64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X
+        main.date={{ .CommitDate }} -X main.builtBy=pterm
+    binary: krmfnsops
+    id: krmfnsops
+archives:
+  - name_template:
+      "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    replacements:
+      linux: Linux
+      386: i386
+      amd64: x86_64
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+snapshot:
+  name_template: "{{ incpatch .Version }}-devel"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs"
+      - "^test"
+      - "^ci"
+      - "^refactor"
+      - Merge pull request
+      - Merge branch
+      - go mod tidy
+nfpms:
+  - formats: [apk]
+    license: Apache 2.0
+    package_name: krmfnsops
+    file_name_template:
+      "{{ .PackageName }}-{{ .Version }}.{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{
+      end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    replacements:
+      amd64: x86_64
+      "386": x86
+    maintainer: Kaweezle <kaweezle-devel@kaweezle.com>
+    description: KRM function (Kustomize) to decrypt SOPS encoded resources
+    homepage: https://github.com/kaweezle/krmfnsops
+    bindir: /usr/bin
+    apk:
+      signature:
+        key_file: gpg_key.asc
+        key_name: kaweezle-devel@kaweezle.com-c9d89864.rsa.pub
+release:
+  extra_files:
+    - glob: ./kaweezle-devel@kaweezle.com-c9d89864.rsa.pub
