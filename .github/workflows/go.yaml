@@ -2,6 +2,7 @@ name: Go build and test
 
 on:
   push:
+    branches: ["*"]
     tags-ignore: ["v*"]
   pull_request:
     branches: ["main"]
