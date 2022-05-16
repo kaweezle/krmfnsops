@@ -1,4 +1,4 @@
-name: goreleaser
+name: Make release on tag
 
 on:
   push:

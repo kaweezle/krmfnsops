@@ -1,8 +1,9 @@
+name: Create version tag on code change
+
 on:
   push:
     branches: [main]
 
-name: Create Git Tag
 jobs:
   versioner:
     runs-on: ubuntu-latest
