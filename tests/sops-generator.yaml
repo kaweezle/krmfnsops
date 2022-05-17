@@ -6,7 +6,7 @@ metadata:
     # https://kubectl.docs.kubernetes.io/guides/extending_kustomize/#required-alpha-flags
     config.kubernetes.io/function: |
       exec:
-        path: ../dist/krmfnsops_linux_amd64/krmfnsops
+        path: ../krmfnsops
 spec:
   files:
   - ./secret.enc.yaml

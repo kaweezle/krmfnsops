@@ -106,7 +106,7 @@ func main() {
 
 	cmd := command.Build(framework.SimpleProcessor{Filter: p, Config: functionConfig}, command.StandaloneDisabled, false)
 	command.AddGenerateDockerfile(cmd)
-	cmd.Version = "v0.1.0" // <---VERSION--->
+	cmd.Version = "v0.1.1" // <---VERSION--->
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
