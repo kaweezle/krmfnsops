@@ -1,4 +1,4 @@
-module github.com/kaweezle/iknite
+module github.com/kaweezle/krmfnsops
 
 go 1.17
 

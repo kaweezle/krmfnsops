@@ -24,31 +24,31 @@ jobs:
           openssl rsa -in gpg_key.asc -pubout -out kaweezle-devel@kaweezle.com-c9d89864.rsa.pub
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-      - name: Run GoReleaser Tests
+      - name: Run GoReleaser Snapshot
         uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
           args: --snapshot --skip-publish --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build APK repo
-        uses: ./.github/actions/make-apkindex
-        with:
-          apk_files: dist/*.apk
-          signature_key: "${{ secrets.GPG_PRIVATE_KEY }}"
-          signature_key_name: kaweezle-devel@kaweezle.com-c9d89864.rsa
-          destination: dist/repo
-      - name: Commit repo to kaweezle.com
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.REPO_ACCESS_TOKEN }}
-        with:
-          source-directory: dist/repo
-          destination-github-username: kaweezle
-          destination-repository-name: kaweezle.github.io
-          # TODO: replace with kaweezle-devel
-          user-name: antoinemartin
-          user-email: antoine@openance.com
-          target-branch: release-test
-          target-directory: docs/repo
-          commit-message: krmfnsops APK repo ${{ github.ref_name }}
+      # - name: Build APK repo
+      #   uses: ./.github/actions/make-apkindex
+      #   with:
+      #     apk_files: dist/*.apk
+      #     signature_key: "${{ secrets.GPG_PRIVATE_KEY }}"
+      #     signature_key_name: kaweezle-devel@kaweezle.com-c9d89864.rsa
+      #     destination: dist/repo
+      # - name: Commit repo to kaweezle.com
+      #   uses: cpina/github-action-push-to-another-repository@main
+      #   env:
+      #     API_TOKEN_GITHUB: ${{ secrets.REPO_ACCESS_TOKEN }}
+      #   with:
+      #     source-directory: dist/repo
+      #     destination-github-username: kaweezle
+      #     destination-repository-name: kaweezle.github.io
+      #     # TODO: replace with kaweezle-devel
+      #     user-name: antoinemartin
+      #     user-email: antoine@openance.com
+      #     target-branch: release-krmfnsops-test
+      #     target-directory: docs/repo
+      #     commit-message: krmfnsops APK repo ${{ github.ref_name }}
