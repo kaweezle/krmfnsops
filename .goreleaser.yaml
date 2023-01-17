@@ -15,7 +15,7 @@ builds:
       - -trimpath
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X
-        main.date={{ .CommitDate }} -X main.builtBy=pterm
+        main.date={{ .CommitDate }} -X main.builtBy=goreleaser
     binary: krmfnsops
     id: krmfnsops
 archives:
