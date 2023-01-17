@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
+	"go.mozilla.org/sops/v3/aes"
+	"go.mozilla.org/sops/v3/cmd/sops/common"
 	"go.mozilla.org/sops/v3/cmd/sops/formats"
-	"go.mozilla.org/sops/v3/decrypt"
 
 	"sigs.k8s.io/kustomize/api/loader"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -33,9 +35,50 @@ type API struct {
 	} `yaml:"spec"`
 }
 
-func Decrypt(b []byte, format formats.Format, file string) (nodes []*yaml.RNode, err error) {
+func DataWithFormat(data []byte, format formats.Format, withMac bool) ([]byte, error) {
+
+	store := common.StoreForFormat(format)
+
+	// Load SOPS file and access the data key
+	tree, err := store.LoadEncryptedFile(data)
+	if err != nil {
+		return nil, err
+	}
+	key, err := tree.Metadata.GetDataKey()
+	if err != nil {
+		return nil, err
+	}
+
+	// Decrypt the tree
+	cipher := aes.NewCipher()
+	mac, err := tree.Decrypt(key, cipher)
+	if err != nil {
+		return nil, err
+	}
+
+	if withMac {
+		// Compute the hash of the cleartext tree and compare it with
+		// the one that was stored in the document. If they match,
+		// integrity was preserved
+		originalMac, err := cipher.Decrypt(
+			tree.Metadata.MessageAuthenticationCode,
+			key,
+			tree.Metadata.LastModified.Format(time.RFC3339),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if originalMac != mac {
+			return nil, fmt.Errorf("failed to verify data integrity. expected mac %q, got %q", originalMac, mac)
+		}
+	}
+	return store.EmitPlainFile(tree.Branches)
+}
+
+func Decrypt(b []byte, format formats.Format, file string, withMac bool) (nodes []*yaml.RNode, err error) {
 	var data []byte
-	data, err = decrypt.DataWithFormat(b, format)
+	data, err = DataWithFormat(b, format, withMac)
 	if err != nil {
 		err = errors.Wrapf(err, "trouble decrypting file %s", file)
 		return
@@ -66,7 +109,8 @@ func main() {
 						err = errors.Wrapf(err, "error reading manifest %q", ynode.Anchor)
 						return
 					}
-					if nodes, err = Decrypt(b, formats.Yaml, ynode.Anchor); err != nil {
+					if nodes, err = Decrypt(b, formats.Yaml, ynode.Anchor, false); err != nil {
+						err = errors.Wrapf(err, "error decoding manifest %q, content -->%s<--", ynode.Anchor, string(b))
 						return
 					}
 					items = append(items, nodes...)
@@ -94,7 +138,7 @@ func main() {
 				}
 
 				format := formats.FormatForPath(file)
-				if nodes, err = Decrypt(b, format, file); err != nil {
+				if nodes, err = Decrypt(b, format, file, true); err != nil {
 					return
 				}
 				items = append(items, nodes...)
