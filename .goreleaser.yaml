@@ -22,7 +22,7 @@ archives:
   - format: binary
     name_template: '{{ .Binary }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
 checksum:
-  name_template: "{{ .ProjectName }}_checksums.txt"
+  name_template: "SHA256SUMS"
 snapshot:
   name_template: "{{ incpatch .Version }}-devel"
 changelog:
@@ -40,12 +40,14 @@ nfpms:
   - formats: [apk]
     license: Apache 2.0
     package_name: krmfnsops
-    file_name_template:
-      "{{ .PackageName }}-{{ .Version }}.{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{
-      end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
-    replacements:
-      amd64: x86_64
-      "386": x86
+    file_name_template: >-
+      {{ .PackageName }}-
+      {{- .Version }}.
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+      {{- if .Mips }}_{{ .Mips }}{{ end }}
     maintainer: Kaweezle <kaweezle-devel@kaweezle.com>
     description: KRM function (Kustomize) to decrypt SOPS encoded resources
     homepage: https://github.com/kaweezle/krmfnsops
