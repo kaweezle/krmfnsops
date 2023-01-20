@@ -17,7 +17,12 @@ export SOPS_AGE_KEY_FILE="$(pwd)/key.txt"
 export SOPS_AGE_RECIPIENTS=$(grep public key.txt | cut -d' ' -f 4)
 echo "Encrypting secret.yaml -> secret.enc.yaml with key.txt..."
 sops -e secret.yaml > secret.enc.yaml
+echo "Encrypting secret2.yaml -> secret2.enc.yaml with key.txt..."
+sops -e secret2.yaml > secret2.enc.yaml
 echo "Running kustomize with transformer..."
 kustomize build . --enable-alpha-plugins --enable-exec > secret.dec.yaml
-diff <(yq eval -P secret.yaml) <(yq eval -P secret.dec.yaml)
+cat secret.yaml > expected.dec.yaml
+echo "---" >> expected.dec.yaml
+cat secret2.yaml >> expected.dec.yaml
+diff <(yq eval -P expected.dec.yaml) <(yq eval -P secret.dec.yaml)
 echo "Secret has been decoded ok 🎉"
