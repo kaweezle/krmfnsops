@@ -6,6 +6,7 @@ resources:
 
 generators:
   - sops-generator.yaml
+  - secret3.enc.yaml
 
 transformers:
   - sops-transformer.yaml
