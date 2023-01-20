@@ -1,5 +1,5 @@
 apiVersion: kaweezle
-kind: SecretsGenerator
+kind: SecretsTransformer
 metadata:
   name: whatever
   annotations:
@@ -7,6 +7,3 @@ metadata:
     config.kubernetes.io/function: |
       exec:
         path: ../krmfnsops
-spec:
-  files:
-    - ./secret.enc.yaml
