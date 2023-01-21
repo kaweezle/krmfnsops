@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: ^1
       - name: Import Signature key
         shell: bash
         run: |
@@ -25,6 +25,12 @@ jobs:
           openssl rsa -in gpg_key.asc -pubout -out kaweezle-devel@kaweezle.com-c9d89864.rsa.pub
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      - name: Docker Login
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run GoReleaser Snapshot
         uses: goreleaser/goreleaser-action@v4
         with:
