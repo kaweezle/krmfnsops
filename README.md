@@ -257,7 +257,7 @@ binaries for most platforms as well as Alpine based packages. Typically, you
 would install it on linux with the following command:
 
 ```console
-> KRMFNSOPS_VERSION="v0.1.3"
+> KRMFNSOPS_VERSION="v0.1.5"
 > curl -sLo /usr/local/bin/krmfnsops https://github.com/kaweezle/krmfnsops/releases/download/${KRMFNSOPS_VERSION}/krmfnsops_${KRMFNSOPS_VERSION}_linux_amd64
 ```
 
@@ -283,7 +283,7 @@ summarize:
 ```Dockerfile
 FROM argoproj/argocd:latest
 
-ARG KRMFNSOPS_VERSION=v0.1.3
+ARG KRMFNSOPS_VERSION=v0.1.5
 
 # Switch to root for the ability to perform install
 USER root
@@ -370,10 +370,10 @@ The `secrets.yaml` file is a SOPS encrypted file containing all the secrets
 needed by Argo CD, including the key used by krmfnsops on the server.
 
 We will use here an [Age](https://github.com/FiloSottile/age) key as an example.
-The key is generated and exported it as a base64 payload with the following:
+The key is generated and exported as a base64 payload with the following:
 
 ```console
-> mkdir -p ~/.config/sops/age && age-keygen >> ~/.config/sops/age/keys.txt
+> mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/keys.txt
 > cat ~/.config/sops/age/keys.txt | openssl base64 -e -A
 <base64 encoded key>
 ```
@@ -394,17 +394,15 @@ metadata:
   name: argocd-sops-private-keys
 type: Opaque
 data:
-  age_key.txt: <base64 encoded key>
+  keys.txt: <base64 encoded key>
 ```
 
 It is encrypted with the following command:
 
 ```console
+> export SOPS_AGE_RECIPIENTS=$(cat ~/.config/sops/age/keys.txt | age-keygen -y)
 > sops -e -i secrets.yaml
 ```
-
-As the key is present in the standard location (`~/.config/sops/age/keys.txt`),
-there is no need to provide it to sops.
 
 The file now contains encrypted entries:
 
@@ -429,6 +427,8 @@ project with the following:
 ```yaml
 creation_rules:
   - encrypted_regex: "^(data|stringData)$"
+    # You can put your age key here (obtain it with cat ~/.config/sops/age/keys.txt| age-keygen -y)
+    # age: age1..
 ```
 
 Now that the secret is configured, making it available for the argocd-repo-sever
