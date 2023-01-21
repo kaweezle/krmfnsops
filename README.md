@@ -19,7 +19,7 @@ the expected results, you need to run `kustomize` with the following flags:
 > kustomize build . --enable-alpha-plugins --enable-exec
 ```
 
-## Configuration as a Generator
+## Use case 1/4: Configuration as a Generator
 
 You create a `sops-generator.yaml` resource for the generator:
 
@@ -51,14 +51,14 @@ generators:
   - sops-generator.yaml
 ```
 
-## Configuration as a Transformer
+## Use case 2/4: Configuration as a Transformer
 
 **CAUTION** Sops computes a Message authentication code from the source file and
 checks it after decrypt in order to verify that the encrypted file has not been
-modified. However, the transformer doesn't receive the original source. It
-receives the encrypted resources one by one. Moreover, Kustomize adds
-annotations to each resource. In consequence, the MAC verification is
-**disabled** in transformer mode.
+modified. However, the transformer doesn't receive the original source, but an
+object representing each resource inside it, modified by kustomize for
+processing purposes. In consequence, the MAC verification is **disabled** in
+transformer mode.
 
 The following is the configuration for the function in Transformer mode:
 
@@ -92,6 +92,164 @@ transformers:
   - sops-transformer.yaml
 ```
 
+## Use case 3/4: Configuration as an _In place_ Generator
+
+In this use case, the generator configuration is the actual resource that needs
+to be added. Let's imagine that you have this secret in your kustomization:
+
+```yaml
+# secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  name: private-repo
+  namespace: argocd
+stringData:
+  password: my-password
+  type: git
+  url: https://github.com/argoproj/private-repo
+  username: my-username
+```
+
+You want it encrypted. For that, you add the krmfnsops function annotation:
+
+```yaml
+annotations:
+  config.kubernetes.io/function: |
+    exec:
+      path: krmfnsops
+```
+
+and encrypt it with sops:
+
+```console
+> sops -e -i secret.yaml
+```
+
+You obtain an encrypted version of the secret that can be added _as is_ as a
+generator in your kustomization:
+
+```yaml
+# kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+generators:
+  - secret.yaml
+```
+
+The command:
+
+```console
+> kustomize build --enable-alpha-plugins --enable-exec .
+```
+
+will output the unencrypted secret.
+
+## Use case 4/4: Use an encrypted generator as a source for replacements
+
+In this use case, we use an encrypted generator that contains all our secrets:
+
+```yaml
+# secrets.yaml
+apiVersion: krmfnsops.kaweezle.com/v1alpha1
+kind: Secrets
+metadata:
+  name: all-my-secrets
+  annotations:
+    # this annotation will keep the resource out of the output
+    krmfnsops.kaweezle.com/keep-local-config: "true"
+    # this annotation will perform decryption for us
+    config.kubernetes.io/function: |
+      exec:
+        path: ../../krmfnsops
+data:
+  github:
+    password: gh_<github_token>
+    application_secret: <secret>
+  ovh:
+    consumer_key: <secret>
+    application_secret: <secret>
+```
+
+Note that it contains the function annotation, and a new annotation
+`krmfnsops.kaweezle.com/keep-local-config`. This annotation will make the
+resource available in the kustomization pipeline but will keep it out of the
+output. This will allow us to use the data of the resource as a source for
+replacements.
+
+We encrypt our secrets with the following command:
+
+```console
+> sops -e -i secret.yaml
+```
+
+Now we can have a secret in our kustomization with a fake password:
+
+```yaml
+# secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  name: private-repo
+stringData:
+  password: this-is-a-fake-password
+  type: git
+  url: https://github.com/argoproj/private-repo
+  username: my-username
+```
+
+A make the kustomization replace the fake password with the unencrypted one:
+
+```yaml
+# kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Add the faked resource
+resources:
+  - secret.yaml
+
+# Add our encypted secrets
+generators:
+  - secrets.yaml
+
+# Replace the fake password with te real one
+replacements:
+  - source:
+      kind: Secrets
+      fieldPath: data.github.password
+    targets:
+      - select:
+          kind: Secret
+          name: private-repo
+        fieldPaths:
+          - stringData.password
+```
+
+Now the kustomization gives:
+
+```console
+❯ kustomize build --enable-alpha-plugins --enable-exec
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  name: private-repo
+stringData:
+  password: gh_<github_token>
+  type: git
+  url: https://github.com/argoproj/private-repo
+  username: my-username
+```
+
+The files are available in `examples/secrets`.
+
 ## Installation
 
 With each [Release](https://github.com/kaweezle/krmfnsops/releases), we provide
@@ -99,7 +257,7 @@ binaries for most platforms as well as Alpine based packages. Typically, you
 would install it on linux with the following command:
 
 ```console
-> KRMFNSOPS_VERSION="v0.1.3"
+> KRMFNSOPS_VERSION="v0.1.5"
 > curl -sLo /usr/local/bin/krmfnsops https://github.com/kaweezle/krmfnsops/releases/download/${KRMFNSOPS_VERSION}/krmfnsops_${KRMFNSOPS_VERSION}_linux_amd64
 ```
 
@@ -125,7 +283,7 @@ summarize:
 ```Dockerfile
 FROM argoproj/argocd:latest
 
-ARG KRMFNSOPS_VERSION=v0.1.3
+ARG KRMFNSOPS_VERSION=v0.1.5
 
 # Switch to root for the ability to perform install
 USER root
@@ -212,10 +370,10 @@ The `secrets.yaml` file is a SOPS encrypted file containing all the secrets
 needed by Argo CD, including the key used by krmfnsops on the server.
 
 We will use here an [Age](https://github.com/FiloSottile/age) key as an example.
-The key is generated and exported it as a base64 payload with the following:
+The key is generated and exported as a base64 payload with the following:
 
 ```console
-> mkdir -p ~/.config/sops/age && age-keygen >> ~/.config/sops/age/keys.txt
+> mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/keys.txt
 > cat ~/.config/sops/age/keys.txt | openssl base64 -e -A
 <base64 encoded key>
 ```
@@ -236,17 +394,15 @@ metadata:
   name: argocd-sops-private-keys
 type: Opaque
 data:
-  age_key.txt: <base64 encoded key>
+  keys.txt: <base64 encoded key>
 ```
 
 It is encrypted with the following command:
 
 ```console
+> export SOPS_AGE_RECIPIENTS=$(cat ~/.config/sops/age/keys.txt | age-keygen -y)
 > sops -e -i secrets.yaml
 ```
-
-As the key is present in the standard location (`~/.config/sops/age/keys.txt`),
-there is no need to provide it to sops.
 
 The file now contains encrypted entries:
 
@@ -271,6 +427,8 @@ project with the following:
 ```yaml
 creation_rules:
   - encrypted_regex: "^(data|stringData)$"
+    # You can put your age key here (obtain it with cat ~/.config/sops/age/keys.txt| age-keygen -y)
+    # age: age1..
 ```
 
 Now that the secret is configured, making it available for the argocd-repo-sever
@@ -311,3 +469,7 @@ Deploy Argo CD with:
 - [goabout/kustomize-sopssecretgenerator](https://github.com/goabout/kustomize-sopssecretgenerator)
   that also contains a more complete list of
   [other alternatives](https://github.com/goabout/kustomize-sopssecretgenerator#alternatives).
+
+```
+
+```
