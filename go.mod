@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/pkg/errors v0.9.1
-	go.mozilla.org/sops v0.0.0-20190912205235-14a22d7a7060
 	go.mozilla.org/sops/v3 v3.7.3
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.10
